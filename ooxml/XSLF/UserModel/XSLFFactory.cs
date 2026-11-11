@@ -41,6 +41,10 @@ namespace NPOI.XSLF.UserModel
             {
                 return new XSLFTheme(parent, part);
             }
+            if (part.ContentType == XSLFRelation.CHART.ContentType)
+            {
+                return new XSLFChart(parent, part);
+            }
 
             // The default POIXML save traversal clears parts before committing them.
             // Unmodeled parts have no serializer and must keep their original bytes.

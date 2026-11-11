@@ -35,6 +35,18 @@ namespace NPOI.XSLF.UserModel
             "application/vnd.openxmlformats-officedocument.theme+xml",
             CT_Presentation.RelationshipsNamespace + "/theme", "/ppt/theme/theme#.xml", typeof(XSLFTheme));
 
+        public static readonly XSLFRelation CHART = new XSLFRelation(
+            "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
+            CT_Presentation.RelationshipsNamespace + "/chart", "/ppt/charts/chart#.xml", typeof(XSLFChart));
+
+        public static readonly XSLFRelation CHART_USER_MODEL = new XSLFRelation(
+            "application/vnd.ms-office.chartstyle+xml",
+            CT_Presentation.RelationshipsNamespace + "/chartUserStyle", "/ppt/charts/style#.xml", null);
+
+        public static readonly XSLFRelation CHART_COLOR_STYLE = new XSLFRelation(
+            "application/vnd.ms-office.chartcolorstyle+xml",
+            CT_Presentation.RelationshipsNamespace + "/chartColorStyle", "/ppt/charts/colors#.xml", null);
+
         private XSLFRelation(string contentType, string relationship, string defaultName, Type type)
             : base(contentType, relationship, defaultName, type)
         {

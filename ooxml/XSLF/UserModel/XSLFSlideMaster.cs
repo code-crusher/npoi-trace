@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Xml;
 using NPOI.OpenXml4Net.OPC;
 using NPOI.OpenXmlFormats.Presentation;
 
@@ -77,6 +78,12 @@ namespace NPOI.XSLF.UserModel
                 return null;
             }
             return GetRequiredRelation<XSLFTheme>(XSLFRelation.THEME);
+        }
+
+        /// <inheritdoc/>
+        protected override XmlElement GetCommonSlideData()
+        {
+            return master.cSld;
         }
 
         protected override void WriteXml(Stream stream)

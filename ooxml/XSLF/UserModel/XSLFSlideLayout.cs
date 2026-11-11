@@ -1,4 +1,5 @@
 using System.IO;
+using System.Xml;
 using NPOI.OpenXml4Net.OPC;
 using NPOI.OpenXmlFormats.Presentation;
 
@@ -64,6 +65,12 @@ namespace NPOI.XSLF.UserModel
         public override XSLFTheme GetTheme()
         {
             return GetSlideMaster().GetTheme();
+        }
+
+        /// <inheritdoc/>
+        protected override XmlElement GetCommonSlideData()
+        {
+            return layout.cSld;
         }
 
         protected override void WriteXml(Stream stream)

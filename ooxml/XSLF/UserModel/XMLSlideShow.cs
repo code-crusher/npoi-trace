@@ -67,6 +67,61 @@ namespace NPOI.XSLF.UserModel
         }
 
         /// <summary>
+        /// Returns classic DrawingML chart parts in this presentation as a read-only collection.
+        /// Charts referenced by several frames or by no frame at all are listed once.
+        /// </summary>
+        public IReadOnlyList<XSLFChart> GetCharts()
+        {
+#if NET8_0_OR_GREATER
+            ObjectDisposedException.ThrowIf(Package == null, this);
+#else
+            if (Package == null)
+            {
+                throw new ObjectDisposedException(nameof(XMLSlideShow));
+            }
+#endif
+            var charts = new List<XSLFChart>();
+            var seen = new HashSet<POIXMLDocumentPart>();
+            CollectCharts(this, this, seen, charts);
+            foreach (var sheet in EnumerateSheets())
+            {
+                CollectCharts(this, sheet, seen, charts);
+            }
+            return charts.AsReadOnly();
+        }
+
+        private static void CollectCharts(XMLSlideShow slideShow, POIXMLDocumentPart part,
+            HashSet<POIXMLDocumentPart> seen, List<XSLFChart> charts)
+        {
+            foreach (var relation in part.GetRelations())
+            {
+                if (relation is XSLFChart chart && seen.Add(chart))
+                {
+                    if (slideShow.Package.GetPart(chart.GetPackagePart().PartName) != null)
+                    {
+                        charts.Add(chart);
+                    }
+                }
+            }
+        }
+
+        private IEnumerable<XSLFSheet> EnumerateSheets()
+        {
+            foreach (var master in GetSlideMasters())
+            {
+                yield return master;
+                foreach (var layout in master.GetSlideLayouts())
+                {
+                    yield return layout;
+                }
+            }
+            foreach (var slide in slides)
+            {
+                yield return slide;
+            }
+        }
+
+        /// <summary>
         /// Appends a blank slide using an existing blank layout, reserving IDs in all preserved compatibility branches.
         /// </summary>
         /// <exception cref="NotSupportedException">The presentation has no blank layout or has an opaque wrapped slide list.</exception>
