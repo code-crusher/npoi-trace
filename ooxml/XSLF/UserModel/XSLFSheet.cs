@@ -1,13 +1,19 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Xml;
 using NPOI.OpenXml4Net.OPC;
+using NPOI.OpenXmlFormats.Presentation;
+using NPOI.XDDF.UserModel;
 
 namespace NPOI.XSLF.UserModel
 {
     /// <summary>
-    /// Shared package navigation and XML persistence for slides, layouts, and masters.
+    /// Shared package navigation, XML persistence, and shape container support for slides,
+    /// layouts, and masters.
     /// </summary>
-    public abstract class XSLFSheet : POIXMLDocumentPart
+    public abstract class XSLFSheet : POIXMLDocumentPart, XSLFShapeContainer
     {
         private byte[] savedXml;
 
@@ -46,6 +52,25 @@ namespace NPOI.XSLF.UserModel
         /// Returns the inherited theme, or null if the master has no theme.
         /// </summary>
         public abstract XSLFTheme GetTheme();
+
+        /// <inheritdoc/>
+        public virtual IReadOnlyList<XSLFShape> GetShapes()
+        {
+            return XSLFShapeContainerSupport.GetShapes(this, GetShapeTree());
+        }
+
+        /// <inheritdoc/>
+        public XSLFSimpleShape CreateSimpleShape(PresetGeometry geometry, string name)
+        {
+            return XSLFShapeContainerSupport.CreateSimpleShape(this, GetShapeTree(), GetSheetRoots(),
+                geometry, name);
+        }
+
+        /// <inheritdoc/>
+        public XSLFGroupShape CreateGroup(string name)
+        {
+            return XSLFShapeContainerSupport.CreateGroup(this, GetShapeTree(), GetSheetRoots(), name);
+        }
 
         protected void InitializeXml()
         {
@@ -86,6 +111,42 @@ namespace NPOI.XSLF.UserModel
                     GetPackagePart().PartName.Name);
             }
             return XSLFXmlHelper.GetReferencedPart<T>(this, relationships.GetRelationship(0).Id, descriptor);
+        }
+
+        XmlElement XSLFShapeContainer.GetShapeTreeForValidation()
+        {
+            return GetShapeTree();
+        }
+
+        IEnumerable<XmlElement> XSLFShapeContainer.GetSheetElementForValidation()
+        {
+            return GetSheetRoots();
+        }
+
+        void XSLFShapeContainer.EnsureCanEdit()
+        {
+            EnsureCanEdit();
+        }
+
+        internal abstract IEnumerable<XmlElement> GetSheetRoots();
+
+        internal abstract XmlElement GetShapeTree();
+
+        internal void EnsureCanEdit()
+        {
+            var package = GetSlideShow().Package;
+#if NET8_0_OR_GREATER
+            ObjectDisposedException.ThrowIf(package == null, this);
+#else
+            if (package == null)
+            {
+                throw new ObjectDisposedException(GetType().Name);
+            }
+#endif
+            if (package.GetPackageAccess() == PackageAccess.READ)
+            {
+                throw new InvalidOperationException("Cannot edit shapes on a read-only sheet.");
+            }
         }
     }
 }

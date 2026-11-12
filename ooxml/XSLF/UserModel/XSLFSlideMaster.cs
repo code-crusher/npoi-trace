@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Xml;
 using NPOI.OpenXml4Net.OPC;
 using NPOI.OpenXmlFormats.Presentation;
 
@@ -82,6 +84,16 @@ namespace NPOI.XSLF.UserModel
         protected override void WriteXml(Stream stream)
         {
             XSLFXmlHelper.Write(stream, master);
+        }
+
+        internal override IEnumerable<XmlElement> GetSheetRoots()
+        {
+            return new[] { master.cSld }.Concat(master.AnyElements ?? Array.Empty<XmlElement>());
+        }
+
+        internal override XmlElement GetShapeTree()
+        {
+            return XSLFShapeTree.GetShapeTree(master.cSld);
         }
     }
 }

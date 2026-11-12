@@ -51,7 +51,6 @@ namespace NPOI.XDDF.UserModel
         BentArrow,
         BentConnector2,
         BentConnector3,
-        DarkBlue,
         BentConnector4,
         BentConnector5,
         BentUpArrow,
@@ -244,7 +243,6 @@ namespace NPOI.XDDF.UserModel
             { ST_ShapeType.bentArrow, PresetGeometry.BentArrow },
             { ST_ShapeType.bentConnector2, PresetGeometry.BentConnector2 },
             { ST_ShapeType.bentConnector3, PresetGeometry.BentConnector3 },
-            { ST_ShapeType.bentConnector4, PresetGeometry.DarkBlue },
             { ST_ShapeType.bentConnector4, PresetGeometry.BentConnector4 },
             { ST_ShapeType.bentConnector5, PresetGeometry.BentConnector5 },
             { ST_ShapeType.bentUpArrow, PresetGeometry.BentUpArrow },
@@ -468,8 +466,6 @@ namespace NPOI.XDDF.UserModel
                     return ST_ShapeType.bentConnector2;
                 case PresetGeometry.BentConnector3:
                     return ST_ShapeType.bentConnector3;
-                case PresetGeometry.DarkBlue:
-                    return ST_ShapeType.bentConnector4;
                 case PresetGeometry.BentConnector4:
                     return ST_ShapeType.bentConnector4;
                 case PresetGeometry.BentConnector5:
