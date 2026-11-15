@@ -23,6 +23,7 @@ using NUnit.Framework;
 using NUnit.Framework.Legacy;
 using System;
 using System.Linq;
+using TestCases.HSSF;
 
 namespace TestCases.XSSF.UserModel
 {
@@ -109,6 +110,70 @@ namespace TestCases.XSSF.UserModel
             ClassicAssert.AreEqual(2, (srcChartSheet.CreateDrawingPatriarch() as XSSFDrawing).GetCharts().Count);
             ClassicAssert.AreEqual(2, (destSheet.CreateDrawingPatriarch() as XSSFDrawing).GetCharts().Count);
             ClassicAssert.AreEqual(2, (destSheet.CreateDrawingPatriarch() as XSSFDrawing).GetCharts()[0].GetAxis().Count);
+        }
+
+        [Test]
+        public void CopySheetToWorkbookShouldPreserveRichTextColors()
+        {
+            // Reproducer for bug #1586: cells whose text is hidden via a white font
+            // become visible (black text) in the copied workbook.
+            using (var stream = HSSFTestDataSamples.OpenSampleFileStream("bug-1586-white-font.xlsx"))
+            {
+                XSSFWorkbook srcWorkbook = new XSSFWorkbook(stream);
+                XSSFSheet srcSheet = (XSSFSheet)srcWorkbook.GetSheetAt(0);
+
+                XSSFWorkbook destWorkbook = new XSSFWorkbook();
+                srcSheet.CopyTo(destWorkbook, srcSheet.SheetName, true, true);
+
+                XSSFSheet destSheet = (XSSFSheet)destWorkbook.GetSheet(srcSheet.SheetName);
+                ClassicAssert.NotNull(destSheet);
+
+                // Every cell that used a white-font rich text string in the source must keep a white rgb color
+                for (int r = srcSheet.FirstRowNum; r <= srcSheet.LastRowNum; r++)
+                {
+                    XSSFRow srcRow = (XSSFRow)srcSheet.GetRow(r);
+                    XSSFRow destRow = (XSSFRow)destSheet.GetRow(r);
+                    if (srcRow == null)
+                    {
+                        continue;
+                    }
+                    ClassicAssert.NotNull(destRow);
+                    for (int c = srcRow.FirstCellNum; c < srcRow.LastCellNum; c++)
+                    {
+                        XSSFCell srcCell = (XSSFCell)srcRow.GetCell(c);
+                        XSSFCell destCell = (XSSFCell)destRow.GetCell(c);
+                        if (srcCell == null || destCell == null)
+                        {
+                            continue;
+                        }
+
+                        XSSFRichTextString srcText = srcCell.RichStringCellValue as XSSFRichTextString;
+                        XSSFRichTextString destText = destCell.RichStringCellValue as XSSFRichTextString;
+                        ClassicAssert.NotNull(destText);
+                        ClassicAssert.AreEqual(srcText.NumFormattingRuns, destText.NumFormattingRuns);
+                        for (int i = 0; i < srcText.NumFormattingRuns; i++)
+                        {
+                            XSSFFont srcFont = (XSSFFont)srcText.GetFontOfFormattingRun(i);
+                            XSSFFont destFont = (XSSFFont)destText.GetFontOfFormattingRun(i);
+                            ClassicAssert.AreEqual(srcFont.GetCTFont().ToString(), destFont.GetCTFont().ToString());
+                        }
+                    }
+                }
+
+                // The cell style (not just the rich text runs) must also keep the white font
+                foreach (ICell destCell in destSheet.GetRow(2).Cells)
+                {
+                    XSSFFont font = (XSSFFont)destCell.CellStyle.GetFont(destWorkbook);
+                    if (destCell.ColumnIndex < 2)
+                    {
+                        // A3 and B3 use bold/italic white Arial 9
+                        var color = font.GetCTFont().color?.Count > 0 ? font.GetCTFont().color[0] : null;
+                        ClassicAssert.IsNotNull(color);
+                        ClassicAssert.IsTrue(color.rgbSpecified);
+                        ClassicAssert.AreEqual(new byte[] { 0xFF, 0xFF, 0xFF, 0xFF }, color.rgb);
+                    }
+                }
+            }
         }
     }
 }

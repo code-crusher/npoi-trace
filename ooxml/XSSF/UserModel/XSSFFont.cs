@@ -667,10 +667,37 @@ namespace NPOI.XSSF.UserModel
             IsBold = src.IsBold;
             IsItalic = src.IsItalic;
             IsStrikeout = src.IsStrikeout;
-            Color = src.Color;
+            if (src is XSSFFont xssfSrc)
+            {
+                // Copy the underlying CT_Color so rgb/theme/tint/indexed are all preserved.
+                // Going through the legacy indexed `Color` short would lose non-indexed colors
+                // (e.g. an rgb white would be cloned as indexed 0, i.e. black).
+                CopyColorFrom(xssfSrc);
+            }
+            else
+            {
+                Color = src.Color;
+            }
             Underline = src.Underline;
             Charset = src.Charset;
             TypeOffset = src.TypeOffset;
+        }
+
+        private void CopyColorFrom(XSSFFont src)
+        {
+            Spreadsheet.CT_Color srcColor = src._ctFont.sizeOfColorArray() == 0 ? null : src._ctFont.GetColorArray(0);
+            if (srcColor == null)
+            {
+                _ctFont.SetColorArray(null);
+                return;
+            }
+            Spreadsheet.CT_Color copy = srcColor.Copy();
+            if (_ctFont.sizeOfColorArray() == 0)
+            {
+                _ctFont.SetColorArray(new System.Collections.Generic.List<Spreadsheet.CT_Color> { copy });
+                return;
+            }
+            _ctFont.SetColorArray(0, copy);
         }
     }
 }
