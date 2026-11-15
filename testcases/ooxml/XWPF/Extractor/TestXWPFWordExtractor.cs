@@ -426,6 +426,27 @@ namespace TestCases.XWPF.Extractor
         }
 
         [Test]
+        public void TestDropDownFormFields()
+        {
+            XWPFDocument doc = XWPFTestDataSamples.OpenSampleDocument("dropdowns.docx");
+
+            // The field result stored in ffData (w:result) resolves to the selected listEntry
+            // and shows up in the extracted text, including inside table cells.
+            ClassicAssert.AreEqual("Favorite color: Green", doc.Paragraphs[1].Text);
+            ClassicAssert.AreEqual("No result set: Blue", doc.Paragraphs[2].Text);
+            ClassicAssert.AreEqual("Bad result: Red", doc.Paragraphs[3].Text);
+            ClassicAssert.AreEqual("Size: Large", doc.Tables[0].GetRow(0).GetCell(0).GetTextRecursively());
+
+            XWPFWordExtractor extractor = new XWPFWordExtractor(doc);
+            String text = extractor.Text;
+            POITestCase.AssertContains(text, "Favorite color: Green");
+            POITestCase.AssertContains(text, "Size: Large");
+            POITestCase.AssertContains(text, "No result set: Blue");
+            POITestCase.AssertContains(text, "Bad result: Red");
+            extractor.Close();
+        }
+
+        [Test]
         public void TestMultipleBodyBug()
         {
             XWPFDocument doc = XWPFTestDataSamples.OpenSampleDocument("MultipleBodyBug.docx");

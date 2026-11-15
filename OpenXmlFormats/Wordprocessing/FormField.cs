@@ -538,6 +538,11 @@ namespace NPOI.OpenXmlFormats.Wordprocessing
         {
             return GetObjectList<CT_FFCheckBox>(FFDataItemsType.checkBox);
         }
+
+        public List<CT_FFDDList> GetDropDownList()
+        {
+            return GetObjectList<CT_FFDDList>(FFDataItemsType.ddList);
+        }
     }
 
 
@@ -706,6 +711,35 @@ namespace NPOI.OpenXmlFormats.Wordprocessing
             {
                 this.listEntryField = value;
             }
+        }
+
+        /// <summary>
+        /// Resolves the selected entry of the drop-down form field. Uses the
+        /// <c>result</c> index, falling back to <c>default</c> when <c>result</c> is
+        /// missing or out of range. Returns null when no valid index can be resolved.
+        /// </summary>
+        public string GetSelectedValue()
+        {
+            if (this.listEntryField.Count == 0)
+            {
+                return null;
+            }
+
+            int index = ParseIndex(this.resultField);
+            if (index < 0 || index >= this.listEntryField.Count)
+            {
+                index = ParseIndex(this.defaultField);
+            }
+            if (index < 0 || index >= this.listEntryField.Count)
+            {
+                return null;
+            }
+            return this.listEntryField[index]?.val;
+        }
+
+        private static int ParseIndex(CT_DecimalNumber number)
+        {
+            return number != null && int.TryParse(number.val, out int index) ? index : -1;
         }
 
         public static CT_FFDDList Parse(XmlNode node, XmlNamespaceManager namespaceManager)

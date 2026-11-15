@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <Compile Remove="OpenXmlFormats\**" />
+    <Compile Include="OpenXmlFormats\Wordprocessing\FormFieldTest.cs" />
     <EmbeddedResource Remove="OpenXmlFormats\**" />
     <None Remove="OpenXmlFormats\**" />
   </ItemGroup>

@@ -662,7 +662,7 @@ namespace NPOI.XWPF.UserModel
                 }
             }
 
-            // Complex type evaluation (currently only for extraction of check boxes)
+            // Complex type evaluation (currently only for extraction of check boxes and drop-down lists)
             if(o is CT_FldChar ctfldChar)
             {
                 if(ctfldChar.fldCharType == ST_FldCharType.begin)
@@ -678,6 +678,14 @@ namespace NPOI.XWPF.UserModel
                             else
                             {
                                 text.Append("|_|");
+                            }
+                        }
+                        foreach(CT_FFDDList dropDownList in ctfldChar.ffData.GetDropDownList())
+                        {
+                            string selected = dropDownList.GetSelectedValue();
+                            if(selected != null)
+                            {
+                                text.Append(selected);
                             }
                         }
                     }
