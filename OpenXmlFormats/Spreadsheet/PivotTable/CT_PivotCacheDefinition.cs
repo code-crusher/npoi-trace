@@ -47,8 +47,8 @@ namespace NPOI.OpenXmlFormats.Spreadsheet
                 ctObj.recordCount = XmlHelper.ReadUInt(node.Attributes["recordCount"]);
             if (node.Attributes["upgradeOnRefresh"] != null)
                 ctObj.upgradeOnRefresh = XmlHelper.ReadBool(node.Attributes["upgradeOnRefresh"]);
-            if (node.Attributes["tupleCache1"] != null)
-                ctObj.tupleCache1 = XmlHelper.ReadBool(node.Attributes["tupleCache1"]);
+            if (node.Attributes["tupleCache"] != null)
+                ctObj.tupleCache1 = XmlHelper.ReadBool(node.Attributes["tupleCache"]);
             if (node.Attributes["supportSubquery"] != null)
                 ctObj.supportSubquery = XmlHelper.ReadBool(node.Attributes["supportSubquery"]);
             if (node.Attributes["supportAdvancedDrill"] != null)
@@ -108,7 +108,8 @@ namespace NPOI.OpenXmlFormats.Spreadsheet
             XmlHelper.WriteAttribute(sw, "minRefreshableVersion", this.minRefreshableVersion);
             XmlHelper.WriteAttribute(sw, "recordCount", this.recordCount);
             XmlHelper.WriteAttribute(sw, "upgradeOnRefresh", this.upgradeOnRefresh);
-            XmlHelper.WriteAttribute(sw, "tupleCache1", this.tupleCache1);
+            if (this.tupleCache1)
+                XmlHelper.WriteAttribute(sw, "tupleCache", this.tupleCache1);
             XmlHelper.WriteAttribute(sw, "supportSubquery", this.supportSubquery);
             XmlHelper.WriteAttribute(sw, "supportAdvancedDrill", this.supportAdvancedDrill);
             sw.Write('>');
