@@ -2105,6 +2105,7 @@ namespace NPOI.OpenXmlFormats.Dml
         internal void Write(StreamWriter sw, string nodeName)
         {
             sw.WriteStart("a", nodeName);
+            XmlHelper.WriteAttribute(sw, "xmlns:a", "http://schemas.openxmlformats.org/drawingml/2006/main");
             sw.Write('>');
             if (this.ext != null)
             {
@@ -3251,6 +3252,7 @@ namespace NPOI.OpenXmlFormats.Dml
         internal void Write(StreamWriter sw, string nodeName)
         {
             sw.WriteStart("a", nodeName);
+            XmlHelper.WriteAttribute(sw, "xmlns:a", "http://schemas.openxmlformats.org/drawingml/2006/main");
             XmlHelper.WriteAttribute(sw, "xmlns:r", "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
             if(idFieldSpecified)
                 XmlHelper.WriteAttribute(sw, "r:id", this.id);

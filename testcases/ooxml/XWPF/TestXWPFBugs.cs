@@ -19,6 +19,9 @@ namespace TestCases.XWPF
     using ICSharpCode.SharpZipLib.Zip;
     using NPOI;
     using NPOI.HSSF.Record.Crypto;
+    using NPOI.OpenXml4Net.OPC;
+    using NPOI.OpenXmlFormats.Dml;
+    using NPOI.OpenXmlFormats.Dml.WordProcessing;
     using NPOI.OpenXmlFormats.Wordprocessing;
     using NPOI.POIFS.FileSystem;
     using NPOI.Util;
@@ -319,6 +322,85 @@ namespace TestCases.XWPF
         public void Bug1712()
         {
             using XWPFDocument doc = XWPFTestDataSamples.OpenSampleDocument("smallFracOnlyOffice.docx");
+        }
+
+        /**
+         * Saving a document whose header picture carries an a:hlinkClick must
+         *  produce well-formed XML. The a: prefix was written without a
+         *  namespace declaration, so Word reported the saved file as corrupt.
+         */
+        [Test]
+        public void Bug1169HeaderPictureHyperlink()
+        {
+            XWPFDocument doc = XWPFTestDataSamples.OpenSampleDocument("headerPic.docx");
+            XWPFHeader header = doc.HeaderList[0];
+            XWPFRun run = header.Paragraphs[0].Runs[0];
+
+            CT_Inline inline = run.GetCTR().GetDrawingArray(0).GetInlineArray(0);
+            PackageRelationship rel = header.GetPackagePart()
+                .AddExternalRelationship("https://example.com/", XWPFRelation.HYPERLINK.Relation);
+            inline.docPr.hlinkClick = new NPOI.OpenXmlFormats.Dml.CT_Hyperlink { id = rel.Id };
+
+            byte[] saved = WriteToBytes(doc);
+            AssertWellFormedXml(saved, "word/header1.xml");
+
+            using XWPFDocument readBack = new XWPFDocument(new MemoryStream(saved));
+            CT_Inline inlineBack = readBack.HeaderList[0].Paragraphs[0].Runs[0]
+                .GetCTR().GetDrawingArray(0).GetInlineArray(0);
+            ClassicAssert.IsNotNull(inlineBack.docPr.hlinkClick);
+            ClassicAssert.AreEqual(rel.Id, inlineBack.docPr.hlinkClick.id);
+            ClassicAssert.AreEqual(1, readBack.HeaderList[0].AllPictures.Count);
+        }
+
+        /**
+         * Same corruption for an a:extLst written below wp:docPr.
+         */
+        [Test]
+        public void Bug1169HeaderPictureExtensionList()
+        {
+            XWPFDocument doc = XWPFTestDataSamples.OpenSampleDocument("headerPic.docx");
+            XWPFRun run = doc.HeaderList[0].Paragraphs[0].Runs[0];
+
+            CT_Inline inline = run.GetCTR().GetDrawingArray(0).GetInlineArray(0);
+            CT_OfficeArtExtensionList extLst = new CT_OfficeArtExtensionList();
+            CT_OfficeArtExtension ext = extLst.AddNewExt();
+            ext.uri = "{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}";
+            ext.Any = "<a16:creationId xmlns:a16=\"http://schemas.microsoft.com/office/drawing/2014/main\" id=\"{11111111-2222-3333-4444-555555555555}\"/>";
+            inline.docPr.extLst = extLst;
+
+            byte[] saved = WriteToBytes(doc);
+            AssertWellFormedXml(saved, "word/header1.xml");
+
+            using XWPFDocument readBack = new XWPFDocument(new MemoryStream(saved));
+            CT_Inline inlineBack = readBack.HeaderList[0].Paragraphs[0].Runs[0]
+                .GetCTR().GetDrawingArray(0).GetInlineArray(0);
+            ClassicAssert.IsNotNull(inlineBack.docPr.extLst);
+            ClassicAssert.AreEqual(1, inlineBack.docPr.extLst.ext.Count);
+            ClassicAssert.AreEqual(ext.uri, inlineBack.docPr.extLst.ext[0].uri);
+        }
+
+        private static byte[] WriteToBytes(XWPFDocument doc)
+        {
+            using(MemoryStream ms = new MemoryStream())
+            {
+                doc.Write(ms);
+                return ms.ToArray();
+            }
+        }
+
+        private static void AssertWellFormedXml(byte[] docx, String partName)
+        {
+            using(ZipFile zf = new ZipFile(new MemoryStream(docx)))
+            {
+                ZipEntry entry = zf.GetEntry(partName);
+                ClassicAssert.IsNotNull(entry, partName + " is missing");
+                using(Stream is1 = zf.GetInputStream(entry))
+                {
+                    XmlDocument xml = new XmlDocument();
+                    xml.Load(is1);
+                    ClassicAssert.IsNotNull(xml.DocumentElement);
+                }
+            }
         }
     }
 }
