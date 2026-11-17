@@ -553,7 +553,10 @@ namespace NPOI.XSSF.UserModel
             pageField.fld = (/*setter*/columnIndex);
 
             pageFields.count = (/*setter*/pageFields.SizeOfPageFieldArray());
-            pivotTableDefinition.location.colPageCount = (/*setter*/pageFields.count);
+            // Page fields default to a single column of filters, one row per field (ISO/IEC 29500
+            // "location": rowPageCount = rows the filter area occupies, colPageCount = columns per page).
+            pivotTableDefinition.location.rowPageCount = (/*setter*/pageFields.count);
+            pivotTableDefinition.location.colPageCount = (/*setter*/1);
         }
 
         /**

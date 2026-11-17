@@ -241,7 +241,9 @@ namespace TestCases.XSSF.UserModel
         }
 
         /**
-        * Verify that it's possible to create a new filter
+        * Verify that it's possible to create a new filter.
+        * The location element must describe the filter area: page fields are laid out
+        * in a single column, one row per page field (ISO/IEC 29500, CT_Location).
         */
         [Test]
         public void TestAddReportFilter()
@@ -249,11 +251,29 @@ namespace TestCases.XSSF.UserModel
             int columnIndex = 0;
 
             pivotTable.AddReportFilter(columnIndex);
-            CT_PageFields fields = pivotTable.GetCTPivotTableDefinition().pageFields;
+            CT_PivotTableDefinition definition = pivotTable.GetCTPivotTableDefinition();
+            CT_PageFields fields = definition.pageFields;
             CT_PageField field = fields.pageField[(0)];
             ClassicAssert.AreEqual(field.fld, columnIndex);
             ClassicAssert.AreEqual(field.hier, -1);
             ClassicAssert.AreEqual(fields.count, 1);
+            ClassicAssert.AreEqual(1u, definition.location.rowPageCount);
+            ClassicAssert.AreEqual(1u, definition.location.colPageCount);
+        }
+
+        /**
+        * Verify that adding multiple report filters grows the filter area by one row per filter
+        */
+        [Test]
+        public void TestAddMultipleReportFilters()
+        {
+            pivotTable.AddReportFilter(0);
+            pivotTable.AddReportFilter(1);
+            CT_PivotTableDefinition definition = pivotTable.GetCTPivotTableDefinition();
+            ClassicAssert.AreEqual(2, definition.pageFields.count);
+            ClassicAssert.AreEqual(2u, definition.location.rowPageCount);
+            ClassicAssert.AreEqual(1u, definition.location.colPageCount);
+            ClassicAssert.IsTrue(definition.multipleFieldFilters);
         }
 
         /**
