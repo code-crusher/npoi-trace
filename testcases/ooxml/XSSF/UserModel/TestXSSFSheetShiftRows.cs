@@ -437,8 +437,7 @@ namespace TestCases.XSSF.UserModel
             ClassicAssert.AreEqual(CellType.Formula, cell.CellType);
             return cell.CellFormula;
         }
-        // This test is written as expected-to-Assert.Fail and should be rewritten
-        // as expected-to-pass when the bug is fixed.
+        // bug 59983: shifting rows applied the formula shift twice to shared formulas
         [Test]
         public void TestSharedFormulas()
         {
@@ -448,18 +447,35 @@ namespace TestCases.XSSF.UserModel
             ClassicAssert.AreEqual("SUM(D2:D4)", getCellFormula(sheet, "D5"));
             ClassicAssert.AreEqual("SUM(E2:E4)", getCellFormula(sheet, "E5"));
             sheet.ShiftRows(3, sheet.LastRowNum, 1);
-            try
-            {
-                ClassicAssert.AreEqual("SUM(C2:C5)", getCellFormula(sheet, "C6"));
-                ClassicAssert.AreEqual("SUM(D2:D5)", getCellFormula(sheet, "D6"));
-                ClassicAssert.AreEqual("SUM(E2:E5)", getCellFormula(sheet, "E6"));
-                POITestCase.TestPassesNow(59983);
-            }
-            catch (AssertionException e)
-            {
-                POITestCase.SkipTest(e);
-            }
+            ClassicAssert.AreEqual("SUM(C2:C5)", getCellFormula(sheet, "C6"));
+            ClassicAssert.AreEqual("SUM(D2:D5)", getCellFormula(sheet, "D6"));
+            ClassicAssert.AreEqual("SUM(E2:E5)", getCellFormula(sheet, "E6"));
 
+            wb.Close();
+        }
+
+        // Issue 901: ShiftRows must update the cached shared formula,
+        // otherwise CellFormula returns a wrongly shifted formula
+        [Test]
+        public void TestSharedFormulaUpdatedAfterShiftRows()
+        {
+            XSSFWorkbook wb = XSSFTestDataSamples.OpenSampleWorkbook("901_SharedFormulaShiftRows.xlsx");
+            XSSFSheet sheet = wb.GetSheetAt(0) as XSSFSheet;
+
+            ClassicAssert.AreEqual("A2&\"Q\"", getCellFormula(sheet, "B2"));
+            ClassicAssert.AreEqual("A17&\"Q\"", getCellFormula(sheet, "B17"));
+
+            sheet.ShiftRows(1, sheet.LastRowNum, 1);
+            sheet.CreateRow(1);
+
+            // the shared formula range moves from B2:B17 to B3:B18 and the
+            // master cell moves from B2 to B3
+            XSSFCell masterCell = (XSSFCell)sheet.GetRow(2).GetCell(1);
+            ClassicAssert.AreEqual("B3:B18", masterCell.GetCTCell().f.@ref);
+            // the cached shared formula must be updated as well (issue 901, fig. 3)
+            ClassicAssert.AreEqual("B3:B18", sheet.GetSharedFormula(0).@ref);
+            ClassicAssert.AreEqual("A3&\"Q\"", getCellFormula(sheet, "B3"));
+            ClassicAssert.AreEqual("A18&\"Q\"", getCellFormula(sheet, "B18"));
             wb.Close();
         }
 
