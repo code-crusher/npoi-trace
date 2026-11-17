@@ -1137,6 +1137,9 @@ namespace TestCases.HSSF.Model
                 ConfirmParseException(e,
                         "The specified formula ' =2+2' starts with an equals sign which is not allowed.");
             }
+
+            // a leading '=' is tolerated, since some producers store formula text that way
+            ConfirmTokenClasses(ParseFormula("=2+2"), typeof(IntPtg), typeof(IntPtg), typeof(AddPtg));
         }
 
         /**

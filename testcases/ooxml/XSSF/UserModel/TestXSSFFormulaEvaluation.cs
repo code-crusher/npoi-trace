@@ -21,8 +21,10 @@ using NPOI.SS.UserModel;
 using NPOI.SS.Util;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using TestCases.HSSF;
 using NPOI.XSSF;
+using NPOI.XSSF.Streaming;
 using NPOI.XSSF.UserModel;
 
 namespace TestCases.XSSF.UserModel
@@ -453,6 +455,51 @@ namespace TestCases.XSSF.UserModel
         public void TestNPOIIssue_1057()
         {
             BaseTestNPOIIssue_1057("xparams.xlsx", "xinstall.xlsx");
+        }
+
+        [Test]
+        public void TestEvaluateCascadeFormulasStoredWithLeadingEqualsSign()
+        {
+            using MemoryStream ms = new MemoryStream();
+            SXSSFWorkbook swb = new SXSSFWorkbook();
+            try
+            {
+                ISheet sheet = swb.CreateSheet();
+                double[] fValues = { 100, 200, 100, 300, 100, 400 };
+                for (int i = 0; i < fValues.Length; i++)
+                {
+                    IRow row = sheet.CreateRow(18 + i);
+                    row.CreateCell(5).SetCellValue(fValues[i]);
+                    row.CreateCell(15).SetCellFormula("=F" + (19 + i) + "*2");
+                }
+                sheet.CreateRow(24).CreateCell(0).SetCellFormula("=SUMIF(F$19:F24,\"100\",P$19:P24)");
+                swb.Write(ms, true);
+            }
+            finally
+            {
+                swb.Close();
+            }
+
+            ms.Position = 0;
+            XSSFWorkbook wb = new XSSFWorkbook(ms);
+            try
+            {
+                ClassicAssert.AreEqual("=SUMIF(F$19:F24,\"100\",P$19:P24)",
+                    wb.GetSheetAt(0).GetRow(24).GetCell(0).CellFormula);
+
+                XSSFFormulaEvaluator evaluator = XSSFFormulaEvaluator.Create(wb, null, null);
+                ICell sumif = wb.GetSheetAt(0).GetRow(24).GetCell(0);
+                ClassicAssert.AreEqual(600, evaluator.Evaluate(sumif).NumberValue, 0);
+                ClassicAssert.AreEqual(CellType.Numeric, evaluator.EvaluateFormulaCell(sumif));
+                ClassicAssert.AreEqual(600, sumif.NumericCellValue, 0);
+
+                XSSFFormulaEvaluator.EvaluateAllFormulaCells(wb);
+                ClassicAssert.AreEqual(600, sumif.NumericCellValue, 0);
+            }
+            finally
+            {
+                wb.Close();
+            }
         }
     }
 

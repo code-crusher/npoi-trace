@@ -104,7 +104,10 @@ namespace NPOI.SS.Formula
          */
         public FormulaParser(String formula, IFormulaParsingWorkbook book, int sheetIndex, int rowIndex)
         {
-            _formulaString = formula;
+            // Excel shows formulas with a leading '=', but the stored representation
+            // (OOXML <f> text and BIFF token streams) omits it. Some producers still
+            // write the '=', so tolerate it here rather than failing evaluation.
+            _formulaString = formula.Length > 0 && formula[0] == '=' ? formula.Substring(1) : formula;
             _pointer = 0;
             this._book = book;
 

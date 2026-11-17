@@ -257,6 +257,23 @@ namespace TestCases.SS.Formula
         {
             checkFormula("'Sheet\u30FB1'!A1:A6");
         }
+
+        [Test]
+        public void TestFormulaWithLeadingEqualsSign()
+        {
+            XSSFWorkbook wb = new XSSFWorkbook();
+            try
+            {
+                IFormulaParsingWorkbook workbook = XSSFEvaluationWorkbook.Create(wb);
+                Ptg[] withEquals = FormulaParser.Parse("=1+2", workbook, FormulaType.Cell, 0);
+                Ptg[] withoutEquals = FormulaParser.Parse("1+2", workbook, FormulaType.Cell, 0);
+                ClassicAssert.AreEqual(withoutEquals.Length, withEquals.Length);
+            }
+            finally
+            {
+                wb.Close();
+            }
+        }
     }
 }
 
