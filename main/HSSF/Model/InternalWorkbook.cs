@@ -117,6 +117,13 @@ namespace NPOI.HSSF.Model
 
         protected List<HyperlinkRecord> hyperlinks;
 
+        /**
+         * holds the XFEXT records (extended format extensions), keyed by
+         * the index of the XF record (ixfe) they extend
+         */
+        [NonSerialized]
+        protected Dictionary<int, XFExtRecord> xfExtRecords;
+
         protected int numxfs = 0;   // hold the number of extended format records
         protected int numfonts = 0;   // hold the number of font records
         private int maxformatid = -1;  // holds the max format id
@@ -152,6 +159,7 @@ namespace NPOI.HSSF.Model
             uses1904datewindowing = false;
             escherBSERecords = new List<EscherBSERecord>();
             commentRecords = new Dictionary<String, NameCommentRecord>();
+            xfExtRecords = new Dictionary<int, XFExtRecord>();
         }
 
         /**
@@ -259,6 +267,11 @@ namespace NPOI.HSSF.Model
                         //if (log.Check(POILogger.DEBUG))
                         //    log.Log(DEBUG, "found palette record at " + k);
                         retval.records.Palettepos = k;
+                        break;
+                    case XFExtRecord.sid:
+                        //if (log.Check(POILogger.DEBUG))
+                        //    log.Log(DEBUG, "found xfext record at " + k);
+                        retval.xfExtRecords[((XFExtRecord)rec).Ixfe] = (XFExtRecord)rec;
                         break;
                     case WindowOneRecord.sid:
                         //if (log.Check(POILogger.DEBUG))
@@ -1089,7 +1102,74 @@ namespace NPOI.HSSF.Model
             records.Add(records.Xfpos + 1, xf);
             records.Xfpos=records.Xfpos + 1;
             numxfs++;
+
+            // XF indexes of existing XFEXT records above the insertion point shift up
+            if (xfExtRecords != null && numxfs > 1)
+            {
+                Dictionary<int, XFExtRecord> shifted = new Dictionary<int, XFExtRecord>();
+                foreach (KeyValuePair<int, XFExtRecord> entry in xfExtRecords)
+                {
+                    shifted[entry.Key >= numxfs - 1 ? entry.Key + 1 : entry.Key] = entry.Value;
+                }
+                xfExtRecords = shifted;
+            }
             return xf;
+        }
+
+        /**
+         * Returns the XFEXT record extending the given XF, or null if there is none
+         */
+        public XFExtRecord GetXFExtRecord(int xfIndex)
+        {
+            if (xfExtRecords != null && xfExtRecords.TryGetValue(xfIndex, out XFExtRecord rec))
+            {
+                return rec;
+            }
+            return null;
+        }
+
+        /**
+         * Attaches an XFEXT record to the workbook, overwriting any existing
+         * extension of the same XF index. If needed, a record slot is inserted
+         * after the last existing XFEXT record (directly following the XF block)
+         * so that the extension is saved with the workbook.
+         */
+        public void AddXFExtRecord(XFExtRecord rec)
+        {
+            if (xfExtRecords == null)
+            {
+                xfExtRecords = new Dictionary<int, XFExtRecord>();
+            }
+            XFExtRecord existing = GetXFExtRecord(rec.Ixfe);
+            if (existing != null)
+            {
+                records.Remove(existing);
+            }
+            int insertPos = FindLastRecordLocBySid(XFExtRecord.sid);
+            if (insertPos < 0)
+            {
+                // insert directly after the last XF record
+                insertPos = records.Xfpos + 1;
+            }
+            else
+            {
+                insertPos++;
+            }
+            records.Add(insertPos, rec);
+            xfExtRecords[rec.Ixfe] = rec;
+        }
+
+        /**
+         * Removes the XFEXT record extending the given XF, if any
+         */
+        public void RemoveXFExtRecord(int xfIndex)
+        {
+            XFExtRecord rec = GetXFExtRecord(xfIndex);
+            if (rec != null)
+            {
+                records.Remove(rec);
+                xfExtRecords.Remove(xfIndex);
+            }
         }
 
         /**
@@ -2610,6 +2690,28 @@ namespace NPOI.HSSF.Model
         }
 
         /**
+         * Returns the index of the last record matching a particular sid.
+         * @param sid   The sid of the record to match
+         * @return      The index of -1 if no match made.
+         */
+        public int FindLastRecordLocBySid(short sid)
+        {
+            int index = 0;
+            int lastIndex = -1;
+            for (IEnumerator iterator = records.GetEnumerator(); iterator.MoveNext(); )
+            {
+                Record record = (Record)iterator.Current;
+
+                if (record.Sid == sid)
+                {
+                    lastIndex = index;
+                }
+                index++;
+            }
+            return lastIndex;
+        }
+
+        /**
          * Returns the next occurance of a record matching a particular sid.
          */
         public Record FindNextRecordBySid(short sid, int pos)
@@ -2689,6 +2791,24 @@ namespace NPOI.HSSF.Model
                 return palette;
             }
         }
+
+        /**
+         * Returns the theme colors of this workbook, or null if the workbook
+         * carries no readable theme (e.g. files saved by Excel 97-2003).
+         */
+        public HSSFTheme Theme
+        {
+            get
+            {
+                if (theme == null)
+                {
+                    theme = HSSFTheme.FromWorkbook(records.Records);
+                }
+                return theme;
+            }
+        }
+        [NonSerialized]
+        private HSSFTheme theme;
 
         /**
          * Finds the primary drawing Group, if one already exists
@@ -2887,8 +3007,13 @@ namespace NPOI.HSSF.Model
  */
         public void RemoveExFormatRecord(ExtendedFormatRecord rec)
         {
+            int xfIndex = GetXFIndexOf(rec);
             records.Remove(rec); // this updates XfPos for us
             numxfs--;
+            if (xfIndex >= 0)
+            {
+                ShiftXFExtRecords(xfIndex);
+            }
         }
 
         /// <summary>
@@ -2901,6 +3026,40 @@ namespace NPOI.HSSF.Model
             int xfptr = records.Xfpos - (numxfs - 1) + index;
             records.Remove(xfptr); // this updates XfPos for us
             numxfs--;
+            ShiftXFExtRecords(index);
+        }
+
+        /**
+         * After the XF record at the given index has been removed, drop its
+         * XFEXT record and shift the indexes of the extensions of the XFs
+         * that moved down by one.
+         */
+        private void ShiftXFExtRecords(int removedXfIndex)
+        {
+            if (xfExtRecords == null)
+            {
+                return;
+            }
+            xfExtRecords.Remove(removedXfIndex);
+            Dictionary<int, XFExtRecord> shifted = new Dictionary<int, XFExtRecord>();
+            foreach (KeyValuePair<int, XFExtRecord> entry in xfExtRecords)
+            {
+                shifted[entry.Key > removedXfIndex ? entry.Key - 1 : entry.Key] = entry.Value;
+            }
+            xfExtRecords = shifted;
+        }
+
+        private int GetXFIndexOf(ExtendedFormatRecord rec)
+        {
+            int firstXf = records.Xfpos - (numxfs - 1);
+            for (int i = 0; i < numxfs; i++)
+            {
+                if (records[firstXf + i] == rec)
+                {
+                    return i;
+                }
+            }
+            return -1;
         }
         public EscherBSERecord GetBSERecord(int pictureIndex)
         {

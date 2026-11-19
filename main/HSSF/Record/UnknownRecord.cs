@@ -197,7 +197,6 @@ namespace NPOI.HSSF.Record
                 case FeatRecord.v12_sid: return "SHARED FEATURE v12";
                 case 0x087B: return "CFEX";
                 case 0x087C: return "XFCRC";
-                case 0x087D: return "XFEXT";
                 case 0x087F: return "CONTINUEFRT12";
                 case 0x088B: return "PLV";
                 case 0x088C: return "COMPAT12";

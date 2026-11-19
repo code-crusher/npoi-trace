@@ -19,6 +19,7 @@
 namespace NPOI.HSSF.UserModel
 {
     using System;
+    using NPOI.HSSF.Model;
     using NPOI.HSSF.Record;
     using NPOI.HSSF.Util;
     using NPOI.SS.UserModel;
@@ -683,6 +684,11 @@ namespace NPOI.HSSF.UserModel
         {
             get
             {
+                IColor extended = GetExtendedFillColor(XFExtRecord.EXTPROP_INTERIOR_BACKGROUND);
+                if (extended != null)
+                {
+                    return extended;
+                }
                 HSSFPalette pallette = new HSSFPalette(_workbook.CustomPalette);
                 return pallette.GetColor(FillBackgroundColor);
             }
@@ -705,9 +711,46 @@ namespace NPOI.HSSF.UserModel
         {
             get
             {
+                IColor extended = GetExtendedFillColor(XFExtRecord.EXTPROP_INTERIOR_FOREGROUND);
+                if (extended != null)
+                {
+                    return extended;
+                }
                 HSSFPalette pallette = new HSSFPalette(_workbook.CustomPalette);
                 return pallette.GetColor(FillForegroundColor);
             }
+        }
+
+        /**
+         * Returns the fill color extension of the given type
+         * (XFExtRecord.EXTPROP_INTERIOR_FOREGROUND or EXTPROP_INTERIOR_BACKGROUND)
+         * carried by the XFEXT record of this style's XF, or null if the workbook
+         * has no such extension. Extensions without a resolvable color (e.g. a
+         * theme reference but no theme in the workbook) are not returned, so the
+         * caller falls back to the classic palette.
+         */
+        private HSSFExtendedFillColor GetExtendedFillColor(int colorExtType)
+        {
+            XFExtRecord xfExt = _workbook.GetXFExtRecord(index);
+            if (xfExt == null)
+            {
+                return null;
+            }
+            FullColorExt colorExt = xfExt.GetColorExt(colorExtType);
+            if (colorExt == null)
+            {
+                return null;
+            }
+            HSSFTheme theme = _workbook.Theme;
+            int[][] themeColors = theme == null ? null : theme.GetThemeColors();
+            if (colorExt.XclrType == XFExtRecord.XCLRTHEMED && themeColors == null)
+            {
+                return null;
+            }
+            short legacyIndex = colorExtType == XFExtRecord.EXTPROP_INTERIOR_BACKGROUND
+                ? FillBackgroundColor
+                : FillForegroundColor;
+            return new HSSFExtendedFillColor(colorExt, legacyIndex, themeColors);
         }
         /**
  * Gets the name of the user defined style.

@@ -161,6 +161,7 @@ namespace NPOI.HSSF.Record
 		        typeof(DVRecord),
 		        typeof(EOFRecord),
 		        typeof(ExtendedFormatRecord),
+		        typeof(XFExtRecord),
 		        typeof(ExternalNameRecord),
 		        typeof(ExternSheetRecord),
 		        typeof(ExtSSTRecord),
