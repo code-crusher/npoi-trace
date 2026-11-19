@@ -87,7 +87,10 @@ namespace NPOI.OpenXmlFormats.Vml
             CT_Fill ctObj = new CT_Fill();
             ctObj.id = XmlHelper.ReadString(node.Attributes["id"]);
             if (node.Attributes["type"] != null)
+            {
                 ctObj.type = (ST_FillType)Enum.Parse(typeof(ST_FillType), node.Attributes["type"].Value);
+                ctObj.typeSpecified = true;
+            }
             if (node.Attributes["on"] != null)
                 ctObj.on = NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalse2(node.Attributes["on"]);
             ctObj.color = XmlHelper.ReadString(node.Attributes["color"]);
@@ -98,17 +101,26 @@ namespace NPOI.OpenXmlFormats.Vml
             ctObj.origin = XmlHelper.ReadString(node.Attributes["origin"]);
             ctObj.position = XmlHelper.ReadString(node.Attributes["position"]);
             if (node.Attributes["aspect"] != null)
+            {
                 ctObj.aspect = (ST_ImageAspect)Enum.Parse(typeof(ST_ImageAspect), node.Attributes["aspect"].Value);
+                ctObj.aspectSpecified = true;
+            }
             ctObj.colors = XmlHelper.ReadString(node.Attributes["colors"]);
             if (node.Attributes["angle"] != null)
+            {
                 ctObj.angle = XmlHelper.ReadDecimal(node.Attributes["angle"]);
+                ctObj.angleSpecified = true;
+            }
             if (node.Attributes["alignshape"] != null)
                     ctObj.alignshape = NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalse2(node.Attributes["alignshape"]);
             ctObj.focus = XmlHelper.ReadString(node.Attributes["focus"]);
             ctObj.focussize = XmlHelper.ReadString(node.Attributes["focussize"]);
             ctObj.focusposition = XmlHelper.ReadString(node.Attributes["focusposition"]);
             if (node.Attributes["method"] != null)
+            {
                 ctObj.method = (ST_FillMethod)Enum.Parse(typeof(ST_FillMethod), node.Attributes["method"].Value);
+                ctObj.methodSpecified = true;
+            }
             if (node.Attributes["recolor"] != null)
                 ctObj.recolor = NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalse2(node.Attributes["recolor"]);
             if (node.Attributes["rotate"] != null)
@@ -122,7 +134,8 @@ namespace NPOI.OpenXmlFormats.Vml
         {
             sw.WriteStart("v", nodeName);
             XmlHelper.WriteAttribute(sw, "id", this.id);
-            XmlHelper.WriteAttribute(sw, "type", this.type.ToString());
+            if (this.typeSpecified)
+                XmlHelper.WriteAttribute(sw, "type", this.type.ToString());
             NPOI.OpenXmlFormats.Util.XmlHelper.WriteAttribute(sw, "on", this.on);
             XmlHelper.WriteAttribute(sw, "color", this.color);
             XmlHelper.WriteAttribute(sw, "opacity", this.opacity);
@@ -131,14 +144,17 @@ namespace NPOI.OpenXmlFormats.Vml
             XmlHelper.WriteAttribute(sw, "size", this.size);
             XmlHelper.WriteAttribute(sw, "origin", this.origin);
             XmlHelper.WriteAttribute(sw, "position", this.position);
-            XmlHelper.WriteAttribute(sw, "aspect", this.aspect.ToString());
+            if (this.aspectSpecified)
+                XmlHelper.WriteAttribute(sw, "aspect", this.aspect.ToString());
             XmlHelper.WriteAttribute(sw, "colors", this.colors);
-            XmlHelper.WriteAttribute(sw, "angle", (double)this.angle);
+            if (this.angleSpecified)
+                XmlHelper.WriteAttribute(sw, "angle", (double)this.angle);
             NPOI.OpenXmlFormats.Util.XmlHelper.WriteAttribute(sw, "alignshape", this.alignshape);
             XmlHelper.WriteAttribute(sw, "focus", this.focus);
             XmlHelper.WriteAttribute(sw, "focussize", this.focussize);
             XmlHelper.WriteAttribute(sw, "focusposition", this.focusposition);
-            XmlHelper.WriteAttribute(sw, "method", this.method.ToString());
+            if (this.methodSpecified)
+                XmlHelper.WriteAttribute(sw, "method", this.method.ToString());
             NPOI.OpenXmlFormats.Util.XmlHelper.WriteAttribute(sw, "recolor", this.recolor);
             NPOI.OpenXmlFormats.Util.XmlHelper.WriteAttribute(sw, "rotate", this.rotate);
             sw.Write('>');
@@ -644,15 +660,24 @@ namespace NPOI.OpenXmlFormats.Vml
             ctObj.wrapcoords = XmlHelper.ReadString(node.Attributes["wrapcoords"]);
             if (node.Attributes["stroked"] != null)
                 ctObj.stroked = NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalse2(node.Attributes["stroked"]);
+            if (node.Attributes["filled"] != null)
+            {
+                ctObj.filled = NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalse2(node.Attributes["filled"]);
+                ctObj.filledSpecified = true;
+            }
             ctObj.spid = XmlHelper.ReadString(node.Attributes["o:spid"]);
             ctObj.id = XmlHelper.ReadString(node.Attributes["id"]);
             ctObj.fillcolor = XmlHelper.ReadString(node.Attributes["fillcolor"]);
+            ctObj.strokecolor = XmlHelper.ReadString(node.Attributes["strokecolor"]);
             if (node.Attributes["o:insetmode"] != null)
                 ctObj.insetmode = (ST_InsetMode)Enum.Parse(typeof(ST_InsetMode), node.Attributes["o:insetmode"].Value);
             ctObj.type = XmlHelper.ReadString(node.Attributes["type"]);
             ctObj.adj = XmlHelper.ReadString(node.Attributes["adj"]);
             ctObj.equationxml = XmlHelper.ReadString(node.Attributes["equationxml"]);
             ctObj.style = XmlHelper.ReadString(node.Attributes["style"]);
+            var ole = node.Attributes["ole", "urn:schemas-microsoft-com:office:office"];
+            if (ole != null)
+                ctObj.ole = ole.Value;
             ctObj.ClientData = new List<CT_ClientData>();
             foreach (XmlNode childNode in node.ChildNodes)
             {
@@ -725,11 +750,16 @@ namespace NPOI.OpenXmlFormats.Vml
             XmlHelper.WriteAttribute(sw, "type", this.type);
             XmlHelper.WriteAttribute(sw, "style", this.style);
             XmlHelper.WriteAttribute(sw, "fillcolor", this.fillcolor);
-            NPOI.OpenXmlFormats.Util.XmlHelper.WriteAttribute(sw, "stroked", this.stroked);
+            XmlHelper.WriteAttribute(sw, "strokecolor", this.strokecolor);
+            if (this.filledSpecified)
+                NPOI.OpenXmlFormats.Util.XmlHelper.WriteAttribute(sw, "filled", this.filled);
+            NPOI.OpenXmlFormats.Util.XmlHelper.WriteAttribute(sw, "stroked", this.stroked, true);
             XmlHelper.WriteAttribute(sw, "wrapcoords", this.wrapcoords);
             XmlHelper.WriteAttribute(sw, "o:insetmode", this.insetmode.ToString());
             XmlHelper.WriteAttribute(sw, "adj", this.adj);
             XmlHelper.WriteAttribute(sw, "equationxml", this.equationxml);
+            if (this.ole != null)
+                XmlHelper.WriteAttribute(sw, "o:ole", this.ole, true);
             sw.Write('>');
 
             if (this.iscomment != null)
@@ -820,6 +850,38 @@ namespace NPOI.OpenXmlFormats.Vml
         {
             get { return fillcolorField; }
             set { fillcolorField = value; }
+        }
+
+        private string strokecolorField;
+        [XmlAttribute]
+        public string strokecolor
+        {
+            get { return strokecolorField; }
+            set { strokecolorField = value; }
+        }
+
+        private ST_TrueFalse filledField = ST_TrueFalse.t;
+        private bool filledFieldSpecified;
+        [XmlAttribute]
+        public ST_TrueFalse filled
+        {
+            get { return filledField; }
+            set { filledField = value; }
+        }
+
+        [XmlIgnore]
+        public bool filledSpecified
+        {
+            get { return filledFieldSpecified; }
+            set { filledFieldSpecified = value; }
+        }
+
+        private string oleField;
+        [XmlAttribute(Namespace = "urn:schemas-microsoft-com:office:office")]
+        public string ole
+        {
+            get { return oleField; }
+            set { oleField = value; }
         }
 
         [XmlAttribute(Namespace = "urn:schemas-microsoft-com:office:office")]
@@ -1109,15 +1171,19 @@ namespace NPOI.OpenXmlFormats.Vml
             this.fill = shape.fill;
             this.fillcolor = shape.fillcolor;
             this.formulas = shape.formulas;
+            this.filled = shape.filled;
+            this.filledSpecified = shape.filledSpecified;
             this.handles = shape.handles;
             this.imagedata = shape.imagedata;
             this.insetmode = shape.insetmode;
             this.iscomment = shape.iscomment;
             this.@lock = shape.@lock;
+            this.ole = shape.ole;
             this.path = shape.path;
             this.shadow = shape.shadow;
             this.spid = shape.spid;
             this.stroke = shape.stroke;
+            this.strokecolor = shape.strokecolor;
             this.stroked = shape.stroked;
             this.style = shape.style;
             this.textbox = shape.textbox;
@@ -3771,8 +3837,10 @@ namespace NPOI.OpenXmlFormats.Vml
             if (node.Attributes["o:preferrelative"] != null)
                 ctObj.preferrelative = NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalse2(node.Attributes["o:preferrelative"]);
             ctObj.coordsize = XmlHelper.ReadString(node.Attributes["coordsize"]);
-            if (node.Attributes["o:spt"] != null)
-                ctObj.id = XmlHelper.ReadString(node.Attributes["o:spt"]);
+            ctObj.id = XmlHelper.ReadString(node.Attributes["id"]);
+            var spt = node.Attributes["spt", "urn:schemas-microsoft-com:office:office"];
+            if (spt != null)
+                ctObj.spt = XmlConvert.ToSingle(spt.Value);
             ctObj.adj = XmlHelper.ReadString(node.Attributes["adj"]);
             ctObj.path2 = XmlHelper.ReadString(node.Attributes["path"]);
             ctObj.formulas = new List<CT_Formulas>();

@@ -185,13 +185,34 @@ namespace NPOI.OpenXmlFormats.Vml.Spreadsheet
                 else if (childNode.LocalName == "Visible")
                     ctObj.visible = NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalseBlank(childNode.InnerText);
                 else if (childNode.LocalName == "MoveWithCells")
-                    ctObj.moveWithCells = NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalseBlank(childNode.InnerText);
+                {
+                    ctObj.moveWithCells = string.IsNullOrEmpty(childNode.InnerText)
+                        ? ST_TrueFalseBlank.t
+                        : NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalseBlank(childNode.InnerText);
+                    ctObj.moveWithCellsSpecified = true;
+                }
                 else if (childNode.LocalName == "SizeWithCells")
-                    ctObj.sizeWithCells = NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalseBlank(childNode.InnerText);
+                {
+                    ctObj.sizeWithCells = string.IsNullOrEmpty(childNode.InnerText)
+                        ? ST_TrueFalseBlank.t
+                        : NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalseBlank(childNode.InnerText);
+                    ctObj.sizeWithCellsSpecified = true;
+                }
                 else if (childNode.LocalName == "Column")
                     ctObj.column.Add(Int32.Parse(childNode.InnerText));
                 else if (childNode.LocalName == "Row")
                     ctObj.row.Add(Int32.Parse(childNode.InnerText));
+                else if (childNode.LocalName == "CF")
+                    ctObj.cf = (ST_CF)Enum.Parse(typeof(ST_CF), childNode.InnerText);
+                else if (childNode.LocalName == "AutoPict")
+                {
+                    ctObj.autoPict = string.IsNullOrEmpty(childNode.InnerText)
+                        ? ST_TrueFalseBlank.t
+                        : NPOI.OpenXmlFormats.Util.XmlHelper.ReadTrueFalseBlank(childNode.InnerText);
+                    ctObj.autoPictSpecified = true;
+                }
+                else if (childNode.LocalName == "FmlaPict")
+                    ctObj.fmlaPictField = childNode.InnerText;
             }
             return ctObj;
         }
@@ -209,6 +230,10 @@ namespace NPOI.OpenXmlFormats.Vml.Spreadsheet
                 sw.Write("<x:SizeWithCells/>");
             if (this.anchor != null)
                 sw.WriteElementAndContent("x:Anchor", this.anchor);
+            if (this.cfFieldSpecified)
+                sw.WriteElementAndContent("x:CF", XmlHelper.GetEnumValue(this.cf));
+            if (this.autoPictSpecified)
+                sw.Write("<x:AutoPict/>");
             if (this.autoFill != ST_TrueFalseBlank.NONE)
                 sw.WriteElementAndContent("x:AutoFill", this.autoFill.ToString());
             if (this.visible != ST_TrueFalseBlank.NONE)
@@ -336,6 +361,54 @@ namespace NPOI.OpenXmlFormats.Vml.Spreadsheet
         public int SizeOfSizeWithCellsArray()
         {
             return sizeWithCellsFieldSpecified ? 1 : 0;
+        }
+
+        private ST_CF cfField;
+        private bool cfFieldSpecified;
+
+        [XmlElement(ElementName = "CF")]
+        public ST_CF cf
+        {
+            get { return this.cfField; }
+            set
+            {
+                this.cfField = value;
+                this.cfFieldSpecified = true;
+            }
+        }
+
+        [XmlIgnore]
+        public bool CFSpecified
+        {
+            get { return this.cfFieldSpecified; }
+            set { this.cfFieldSpecified = value; }
+        }
+
+        private ST_TrueFalseBlank autoPictField = ST_TrueFalseBlank.NONE;
+        private bool autoPictFieldSpecified;
+
+        [XmlElement(ElementName = "AutoPict")]
+        [DefaultValue(ST_TrueFalseBlank.NONE)]
+        public ST_TrueFalseBlank autoPict
+        {
+            get { return this.autoPictField; }
+            set { this.autoPictField = value; }
+        }
+
+        [XmlIgnore]
+        public bool autoPictSpecified
+        {
+            get { return this.autoPictFieldSpecified; }
+            set { this.autoPictFieldSpecified = value; }
+        }
+
+        private string fmlaPictField;
+
+        [XmlElement(ElementName = "FmlaPict")]
+        public string FmlaPict
+        {
+            get { return this.fmlaPictField; }
+            set { this.fmlaPictField = value; }
         }
         ST_TrueFalseBlank sizeWithCellsField = ST_TrueFalseBlank.NONE;
         bool sizeWithCellsFieldSpecified = false;

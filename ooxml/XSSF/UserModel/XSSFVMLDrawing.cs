@@ -138,7 +138,8 @@ namespace NPOI.XSSF.UserModel
                 {
                     CT_Shapetype st = CT_Shapetype.Parse(nd, nsmgr);
                     _items.Add(st);
-                    _shapeTypeId = st.id;
+                    if (st.spt == 202)
+                        _shapeTypeId = st.id;
                 }
                 else if (nd.LocalName == QNAME_SHAPE.Name)
                 {

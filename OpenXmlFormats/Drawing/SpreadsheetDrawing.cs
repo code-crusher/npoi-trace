@@ -1330,12 +1330,13 @@ namespace NPOI.OpenXmlFormats.Dml.Spreadsheet
     public class CT_Drawing
     {
         private List<IEG_Anchor> cellAnchors = new List<IEG_Anchor>();
+        private List<bool> anchorsInAlternateContent = new List<bool>();
         //private List<CT_AbsoulteCellAnchor> absoluteCellAnchors = new List<CT_AbsoulteCellAnchor>();
-        private bool inAlternateContent = false;
         public CT_TwoCellAnchor AddNewTwoCellAnchor()
         {
             CT_TwoCellAnchor anchor = new CT_TwoCellAnchor();
             cellAnchors.Add(anchor);
+            anchorsInAlternateContent.Add(false);
             return anchor;
         }
         public int SizeOfTwoCellAnchorArray()
@@ -1357,20 +1358,22 @@ namespace NPOI.OpenXmlFormats.Dml.Spreadsheet
             {
                 sw.Write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>");
                 sw.Write("<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">");
-                if(inAlternateContent)
+                for (int i = 0; i < cellAnchors.Count; i++)
                 {
-                    sw.Write("<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">");
-                    sw.Write("<mc:Choice xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" Requires=\"a14\">");
-                }
-                foreach (IEG_Anchor anchor in this.cellAnchors)
-                {
-                    anchor.Write(sw);
-                }
-                if(inAlternateContent)
-                {
-                    sw.Write("</mc:Choice>");
-                    sw.Write("<mc:Fallback />");
-                    sw.Write("</mc:AlternateContent>");
+                    if (i < anchorsInAlternateContent.Count && anchorsInAlternateContent[i])
+                    {
+                        // MCE (ECMA-376 Part 3) allows exactly one child element per mc:Choice,
+                        // so each anchor keeps its own mc:AlternateContent wrapper.
+                        sw.Write("<mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\">");
+                        sw.Write("<mc:Choice xmlns:a14=\"http://schemas.microsoft.com/office/drawing/2010/main\" Requires=\"a14\">");
+                    }
+                    cellAnchors[i].Write(sw);
+                    if (i < anchorsInAlternateContent.Count && anchorsInAlternateContent[i])
+                    {
+                        sw.Write("</mc:Choice>");
+                        sw.Write("<mc:Fallback />");
+                        sw.Write("</mc:AlternateContent>");
+                    }
                 }
                 sw.Write("</xdr:wsDr>");
             }
@@ -1393,9 +1396,12 @@ namespace NPOI.OpenXmlFormats.Dml.Spreadsheet
         public void Set(CT_Drawing ctDrawing)
         {
             this.cellAnchors.Clear();
-            foreach (IEG_Anchor anchor in ctDrawing.cellAnchors)
+            this.anchorsInAlternateContent.Clear();
+            for (int i = 0; i < ctDrawing.cellAnchors.Count; i++)
             {
-                this.cellAnchors.Add(anchor);
+                this.cellAnchors.Add(ctDrawing.cellAnchors[i]);
+                this.anchorsInAlternateContent.Add(i < ctDrawing.anchorsInAlternateContent.Count
+                    && ctDrawing.anchorsInAlternateContent[i]);
             }
         }
 
@@ -1432,23 +1438,30 @@ namespace NPOI.OpenXmlFormats.Dml.Spreadsheet
             {
                 if(node.LocalName == "AlternateContent")
                 {
-                    ctDrawing.inAlternateContent = true;
-                    ctDrawing.cellAnchors.Add(ParseAlternateContent(node, namespaceManager));
+                    IEG_Anchor anchor = ParseAlternateContent(node, namespaceManager);
+                    if (anchor != null)
+                    {
+                        ctDrawing.cellAnchors.Add(anchor);
+                        ctDrawing.anchorsInAlternateContent.Add(true);
+                    }
                 }
                 else if (node.LocalName == "twoCellAnchor")
                 {
                     CT_TwoCellAnchor twoCellAnchor = CT_TwoCellAnchor.Parse(node, namespaceManager);
                     ctDrawing.cellAnchors.Add(twoCellAnchor);
+                    ctDrawing.anchorsInAlternateContent.Add(false);
                 }
                 else if (node.LocalName == "oneCellAnchor")
                 {
                     CT_OneCellAnchor oneCellAnchor = CT_OneCellAnchor.Parse(node, namespaceManager);
                     ctDrawing.cellAnchors.Add(oneCellAnchor);
+                    ctDrawing.anchorsInAlternateContent.Add(false);
                 }
                 else if (node.LocalName == "absCellAnchor")
                 {
                     CT_AbsoluteCellAnchor absCellAnchor = CT_AbsoluteCellAnchor.Parse(node, namespaceManager);
                     ctDrawing.cellAnchors.Add(absCellAnchor);
+                    ctDrawing.anchorsInAlternateContent.Add(false);
                 }
             }
             return ctDrawing;
