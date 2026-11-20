@@ -983,6 +983,47 @@ namespace TestCases.HSSF.UserModel
             ClassicAssert.IsFalse(wb.IsWriteProtected);
         }
         [Test]
+        public void Bug716WriteProtectWorkbook()
+        {
+            HSSFWorkbook wb = new HSSFWorkbook();
+
+            // WriteProtectWorkbook must work without first accessing InternalWorkbook.WriteAccess
+            wb.WriteProtectWorkbook("mypassword", "myuser");
+            ClassicAssert.IsTrue(wb.IsWriteProtected);
+
+            // Exactly one WriteAccess record, directly after InterfaceEnd and before FileSharing
+            IList records = wb.Workbook.Records;
+            int interfaceEnd = -1;
+            int writeAccess = -1;
+            int fileSharing = -1;
+            int writeAccessCount = 0;
+            for (int i = 0; i < records.Count; i++)
+            {
+                if (records[i] is InterfaceEndRecord)
+                {
+                    interfaceEnd = i;
+                }
+                else if (records[i] is WriteAccessRecord)
+                {
+                    writeAccessCount++;
+                    writeAccess = i;
+                }
+                else if (records[i] is FileSharingRecord)
+                {
+                    fileSharing = i;
+                }
+            }
+            ClassicAssert.AreEqual(1, writeAccessCount);
+            ClassicAssert.AreEqual(interfaceEnd + 1, writeAccess);
+            ClassicAssert.AreEqual(writeAccess + 1, fileSharing);
+            ClassicAssert.AreEqual("myuser", ((WriteAccessRecord)records[writeAccess]).Username);
+            ClassicAssert.AreEqual("myuser", ((FileSharingRecord)records[fileSharing]).Username);
+
+            HSSFWorkbook wbBack = HSSFTestDataSamples.WriteOutAndReadBack(wb);
+            ClassicAssert.IsTrue(wbBack.IsWriteProtected);
+            ClassicAssert.AreEqual("myuser", wbBack.Workbook.WriteAccess.Username);
+        }
+        [Test]
         public void Bug50298()
         {
             HSSFWorkbook wb = HSSFTestDataSamples.OpenSampleWorkbook("50298.xls");
