@@ -207,6 +207,12 @@ namespace NPOI.SS.Formula.Atp
             r(m, "VAR.S", VarS.Instance);
             r(m, "VAR.P", VarP.Instance);
 
+            // dynamic array functions and operators, see https://github.com/nissl-lab/npoi/issues/663
+            r(m, "SINGLE", SingleFunction.instance);
+            r(m, "ANCHORARRAY", AnchorArrayFunction.instance);
+            r(m, "SEQUENCE", SequenceFunction.instance);
+            r(m, "RANDARRAY", RandArrayFunction.instance);
+
             return m;
         }
 

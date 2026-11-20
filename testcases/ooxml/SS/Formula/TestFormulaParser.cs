@@ -30,6 +30,7 @@ namespace TestCases.SS.Formula
     using NPOI.HSSF.UserModel;
     using NPOI.SS.Formula;
     using NPOI.SS.Formula.PTG;
+    using NPOI.SS.UserModel;
     using NPOI.Util;
     using NPOI.XSSF;
     using NPOI.XSSF.UserModel;
@@ -256,6 +257,48 @@ namespace TestCases.SS.Formula
         public void TestUnicodeSheetName()
         {
             checkFormula("'Sheet\u30FB1'!A1:A6");
+        }
+
+        // dynamic array operators, see https://github.com/nissl-lab/npoi/issues/663
+        [Test]
+        public void TestDynamicArrayOperators()
+        {
+            XSSFWorkbook wb = new XSSFWorkbook();
+            XSSFEvaluationWorkbook evalBook = XSSFEvaluationWorkbook.Create(wb);
+
+            // the implicit intersection operator '@' parses as _xlfn.SINGLE
+            Ptg[] ptgs = FormulaParser.Parse("@A1:A3", evalBook, FormulaType.Cell, -1);
+            ClassicAssert.AreEqual(3, ptgs.Length);
+            ClassicAssert.IsTrue(ptgs[0] is NameXPxg);
+            ClassicAssert.AreEqual("_xlfn.SINGLE", ptgs[0].ToFormulaString());
+
+            // the spilled range operator '#' parses as _xlfn.ANCHORARRAY
+            ptgs = FormulaParser.Parse("SUM(A2#)", evalBook, FormulaType.Cell, -1);
+            ClassicAssert.IsTrue(ptgs[0] is NameXPxg);
+            ClassicAssert.AreEqual("_xlfn.ANCHORARRAY", ptgs[0].ToFormulaString());
+
+            wb.Close();
+        }
+
+        [Test]
+        public void TestDynamicArrayOperatorsPreservedInXSSF()
+        {
+            // XSSF stores the formula text as typed by the user: the operator syntax
+            // survives a SetCellFormula/getCellFormula round trip
+            XSSFWorkbook wb = new XSSFWorkbook();
+            ISheet sheet = wb.CreateSheet();
+            IRow row = sheet.CreateRow(0);
+            row.CreateCell(0).SetCellValue(1);
+            row.CreateCell(1).SetCellValue(2);
+
+            ICell cell = sheet.CreateRow(1).CreateCell(0);
+            cell.SetCellFormula("@A1:B1");
+            ClassicAssert.AreEqual("@A1:B1", cell.CellFormula);
+
+            cell.SetCellFormula("SUM(A2#)");
+            ClassicAssert.AreEqual("SUM(A2#)", cell.CellFormula);
+
+            wb.Close();
         }
     }
 }

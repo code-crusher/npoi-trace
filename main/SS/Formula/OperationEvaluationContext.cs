@@ -61,6 +61,22 @@ namespace NPOI.SS.Formula
             return _workbook;
         }
 
+        internal WorkbookEvaluator BookEvaluator
+        {
+            get
+            {
+                return _bookEvaluator;
+            }
+        }
+
+        internal EvaluationTracker Tracker
+        {
+            get
+            {
+                return _tracker;
+            }
+        }
+
         public bool IsSingleValue
         {
             get

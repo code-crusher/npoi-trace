@@ -72,6 +72,11 @@ namespace NPOI.SS.Formula
         private const char CR = '\r';  // Normally just XSSF
         private const char LF = '\n';  // Normally just XSSF
 
+        /** internal name of the implicit intersection operator '@' */
+        private const String FORMULA_NAME_SINGLE = "_xlfn.SINGLE";
+        /** internal name of the spilled range operator '#' */
+        private const String FORMULA_NAME_ANCHORARRAY = "_xlfn.ANCHORARRAY";
+
         /**
          * Lookahead unicode codepoint.
          * Gets value '\0' when the input string is exhausted
@@ -1604,10 +1609,36 @@ namespace NPOI.SS.Formula
 
 
         /**
+         * Builds the parse node for a dynamic array operator, i.e. the implicit intersection
+         * operator '@' or the spilled range operator '#'. The operators are encoded as their
+         * future-function counterparts (_xlfn.SINGLE and _xlfn.ANCHORARRAY) - this is how
+         * Excel persists them in the file formats.
+         *
+         * @param name the internal function name including the _xlfn. prefix
+         * @param arg the operand of the operator
+         */
+        private ParseNode GetDynamicArrayFunctionParseNode(String name, ParseNode arg)
+        {
+            if (_book == null)
+            {
+                // Only test cases omit the book (expecting it not to be needed)
+                throw new InvalidOperationException("Need book to evaluate name '" + name + "'");
+            }
+            Ptg nameToken = _book.GetNameXPtg(name, null);
+            if (nameToken == null)
+            {
+                throw new FormulaParseException("Specified name '" + name +
+                        "' is completely unknown in the current workbook.");
+            }
+            ParseNode[] allArgs = { new ParseNode(nameToken), arg, };
+            return new ParseNode(FuncVarPtg.Create(name, 2), allArgs);
+        }
+
+        /**
          * Note - Excel Function names are 'case aware but not case sensitive'.  This method may end
          * up creating a defined name record in the workbook if the specified name is not an internal
          * Excel Function, and Has not been encountered before.
-         * 
+         *
          * Side effect: creates workbook name if name is not recognized (name is probably a UDF)
          *
          * @param name case preserved Function name (as it was entered/appeared in the formula).
@@ -1861,6 +1892,13 @@ namespace NPOI.SS.Formula
             ParseNode result = ParseSimpleFactor();
             while (true)
             {
+                if (look == '#')
+                {
+                    // spilled range operator, e.g. A1# - the reference must be directly adjacent
+                    Match('#');
+                    result = GetDynamicArrayFunctionParseNode(FORMULA_NAME_ANCHORARRAY, result);
+                    continue;
+                }
                 SkipWhite();
                 if (look != '%')
                 {
@@ -1889,6 +1927,10 @@ namespace NPOI.SS.Formula
                 case '+':
                     Match('+');
                     return ParseUnary(true);
+                case '@':
+                    // implicit intersection operator, e.g. @A1:A3
+                    Match('@');
+                    return GetDynamicArrayFunctionParseNode(FORMULA_NAME_SINGLE, PowerFactor());
                 case '(':
                     Match('(');
                     ParseNode inside = UnionExpression();

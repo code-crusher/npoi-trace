@@ -736,7 +736,7 @@ namespace NPOI.SS.Formula
                             areaArg = true;
                         }
                     }
-                    bool arrayMode = false;
+                    bool arrayMode = !ec.IsSingleValue;
                     if(areaArg)
                         for(int ii = i; ii < iSize; ii++)
                         {
@@ -1035,6 +1035,40 @@ namespace NPOI.SS.Formula
 
             IEvaluationCell cell = sheet.GetCell(rowIndex, columnIndex);
             return EvaluateAny(cell, sheetIndex, rowIndex, columnIndex, tracker);
+        }
+
+        /**
+         * Evaluates the formula of the anchor cell of a dynamic array in array mode,
+         * i.e. the full array result is returned instead of the single value of the
+         * anchor cell. Used by the spilled range operator '#'
+         * (_xlfn.ANCHORARRAY) to resolve the spilled range.
+         *
+         * @param anchorCell the cell holding the dynamic array formula
+         * @param tracker the tracker of the calling evaluation, used for circular
+         *        reference detection and dependency tracking
+         * @return the full evaluation result of the anchor formula, possibly an
+         *         {@link ErrorEval}, never <code>null</code>
+         */
+        internal ValueEval EvaluateAnchorArray(IEvaluationCell anchorCell, EvaluationTracker tracker)
+        {
+            int sheetIndex = GetSheetIndex(anchorCell.Sheet);
+            FormulaCellCacheEntry cce = _cache.GetOrCreateFormulaCellEntry(anchorCell);
+            tracker.AcceptFormulaDependency(cce);
+            if (!tracker.StartEvaluate(cce))
+            {
+                return ErrorEval.CIRCULAR_REF_ERROR;
+            }
+            try
+            {
+                Ptg[] ptgs = _workbook.GetFormulaTokens(anchorCell);
+                OperationEvaluationContext ec = new OperationEvaluationContext(this, _workbook, sheetIndex,
+                    anchorCell.RowIndex, anchorCell.ColumnIndex, tracker, /*isSingleValue*/ false);
+                return EvaluateFormula(ec, ptgs);
+            }
+            finally
+            {
+                tracker.EndEvaluate(cce);
+            }
         }
 
         public FreeRefFunction FindUserDefinedFunction(String functionName)

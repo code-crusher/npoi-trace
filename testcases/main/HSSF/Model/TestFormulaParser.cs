@@ -1771,6 +1771,66 @@ namespace TestCases.HSSF.Model
         }
 
         [Test]
+        public void TestSingleOperator()
+        {
+            HSSFWorkbook wb = new HSSFWorkbook();
+
+            // the implicit intersection operator '@' parses as _xlfn.SINGLE
+            Ptg[] ptgs = HSSFFormulaParser.Parse("@A1:A3", wb);
+            ConfirmTokenClasses(ptgs, typeof(NameXPtg), typeof(AreaPtg), typeof(FuncVarPtg));
+
+            // a single cell operand
+            ptgs = HSSFFormulaParser.Parse("@A1", wb);
+            ConfirmTokenClasses(ptgs, typeof(NameXPtg), typeof(RefPtg), typeof(FuncVarPtg));
+
+            // the future-function form parses to the same tokens
+            ptgs = HSSFFormulaParser.Parse("_xlfn.SINGLE(A1:A3)", wb);
+            ConfirmTokenClasses(ptgs, typeof(NameXPtg), typeof(AreaPtg), typeof(FuncVarPtg));
+
+            // '@' applies to the whole function result, here: the sum is then intersected
+            ptgs = HSSFFormulaParser.Parse("@SUM(A1:A3)", wb);
+            ClassicAssert.AreEqual(typeof(NameXPtg), ptgs[0].GetType());
+            ClassicAssert.AreEqual(typeof(FuncVarPtg), ptgs[ptgs.Length - 1].GetType());
+
+            // '@' renders back as the future function
+            ClassicAssert.AreEqual("_xlfn.SINGLE(A1:A3)",
+                    HSSFFormulaParser.ToFormulaString(wb, HSSFFormulaParser.Parse("@A1:A3", wb)));
+
+            wb.Close();
+        }
+
+        [Test]
+        public void TestSpilledRangeOperator()
+        {
+            HSSFWorkbook wb = new HSSFWorkbook();
+
+            // the spilled range operator '#' parses as _xlfn.ANCHORARRAY
+            Ptg[] ptgs = HSSFFormulaParser.Parse("A2#", wb);
+            ConfirmTokenClasses(ptgs, typeof(NameXPtg), typeof(RefPtg), typeof(FuncVarPtg));
+
+            // inside a function call
+            ptgs = HSSFFormulaParser.Parse("SUM(A2#)", wb);
+            ConfirmTokenClasses(ptgs, typeof(NameXPtg), typeof(RefPtg), typeof(FuncVarPtg), typeof(AttrPtg));
+
+            // the future-function form parses to the same tokens
+            ptgs = HSSFFormulaParser.Parse("SUM(_xlfn.ANCHORARRAY(A2))", wb);
+            ConfirmTokenClasses(ptgs, typeof(NameXPtg), typeof(RefPtg), typeof(FuncVarPtg), typeof(AttrPtg));
+
+            // '#' binds tighter than '^' and '%'
+            ptgs = HSSFFormulaParser.Parse("A2#%", wb);
+            ConfirmTokenClasses(ptgs, typeof(NameXPtg), typeof(RefPtg), typeof(FuncVarPtg), typeof(PercentPtg));
+            ptgs = HSSFFormulaParser.Parse("A2#^3", wb);
+            ConfirmTokenClasses(ptgs, typeof(NameXPtg), typeof(RefPtg), typeof(FuncVarPtg),
+                    typeof(IntPtg), typeof(PowerPtg));
+
+            // '#' renders back as the future function
+            ClassicAssert.AreEqual("SUM(_xlfn.ANCHORARRAY(A2))",
+                    HSSFFormulaParser.ToFormulaString(wb, HSSFFormulaParser.Parse("SUM(A2#)", wb)));
+
+            wb.Close();
+        }
+
+        [Test]
         public void Test57196_Formula()
         {
             HSSFWorkbook wb = new HSSFWorkbook();
